@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 use strict;
 use lib 'lib';
-use Test::More tests => 18;
+use Test::More tests => 23;
 use_ok("Parse::CPAN::Packages");
 
 my $p = Parse::CPAN::Packages->new("t/02packages.details.txt");
@@ -9,7 +9,7 @@ isa_ok($p, "Parse::CPAN::Packages");
 
 my @packages = sort map { $_->package } $p->packages;
 is_deeply(\@packages,
-          [qw(Acme::Colour Acme::ComeFrom Acme::Comment Acme::CramCode Acme::Currency accessors accessors::chained accessors::classic )]);
+          [qw(Acme::Colour Acme::Colour::Old Acme::ComeFrom Acme::Comment Acme::CramCode Acme::Currency accessors accessors::chained accessors::classic )]);
 
 my $m = $p->package("Acme::Colour");
 is($m->package, "Acme::Colour");
@@ -42,3 +42,27 @@ is( $dist, $p->package("accessors::chained")->distribution,
 is_deeply( [ map { $_->package } $dist->contains ],
           [ qw( accessors accessors::chained accessors::classic ) ],
            "dist contains packages" );
+
+$d = $p->latest_distribution("Acme-Colour");
+is($d->prefix, "L/LB/LBROCARD/Acme-Colour-1.00.tar.gz");
+is($d->version, "1.00");
+
+is_deeply([map { $_->prefix } $p->latest_distributions], [
+  'A/AU/AUTRIJUS/Acme-ComeFrom-0.07.tar.gz',
+  'X/XE/XERN/Acme-CramCode-0.01.tar.gz',
+  'S/SM/SMUELLER/Acme-Currency-0.01.tar.gz',
+  'L/LB/LBROCARD/Acme-Colour-1.00.tar.gz',
+  'K/KA/KANE/Acme-Comment-1.02.tar.gz',
+  'S/SP/SPURKIS/accessors-0.02.tar.gz'
+]);
+
+open(IN, "t/02packages.details.txt");
+my $details = join '', <IN>;
+close(IN);
+
+$p = Parse::CPAN::Packages->new($details);
+isa_ok($p, "Parse::CPAN::Packages");
+
+@packages = sort map { $_->package } $p->packages;
+is_deeply(\@packages,
+          [qw(Acme::Colour Acme::Colour::Old Acme::ComeFrom Acme::Comment Acme::CramCode Acme::Currency accessors accessors::chained accessors::classic )]);

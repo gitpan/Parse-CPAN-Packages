@@ -4,12 +4,14 @@ NAME
 SYNOPSIS
       use Parse::CPAN::Packages;
 
-      # must have downloading and un-gzip-ed
+      # must have downloaded and un-gzip-ed
       my $p = Parse::CPAN::Packages->new("02packages.details.txt");
+      # either a filename as above or pass in the contents of the file
+      my $p = Parse::CPAN::Packages->new($packages_details_contents);
 
       my $m = $p->package("Acme::Colour");
       # $m is a Parse::CPAN::Packages::Package object
-      print $m->package, "\n";    # Acme::Colour
+      print $m->package, "\n";   # Acme::Colour
       print $m->version, "\n";   # 1.00
 
       my $d = $p->distribution;
@@ -22,8 +24,19 @@ SYNOPSIS
       print $d->cpanid, "\n";    # LBROCARD
       print $d->distvname, "\n"; # Acme-Colour-1.00
 
-      my @packages = $p->packages;
       # all the package objects
+      my @packages = $p->packages;
+
+      # all the distribution objects
+      my @distributions = $p->distributions;
+
+      # the latest distribution
+      $d = $p->latest_distribution("Acme-Colour");
+      is($d->prefix, "L/LB/LBROCARD/Acme-Colour-1.00.tar.gz");
+      is($d->version, "1.00");
+
+      # all the latest distributions
+      my @distributions = $p->latest_distributions;
 
 DESCRIPTION
     The Comprehensive Perl Archive Network (CPAN) is a very useful

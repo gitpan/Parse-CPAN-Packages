@@ -1,39 +1,43 @@
 package Parse::CPAN::Packages;
 use strict;
 use base qw( Class::Accessor::Chained );
-__PACKAGE__->mk_accessors(qw( filename data dists ));
+__PACKAGE__->mk_accessors(qw( details data dists latestdists ));
 use CPAN::DistnameInfo;
 use Parse::CPAN::Packages::Package;
+use Sort::Versions;
 use vars qw($VERSION);
-$VERSION = '2.17';
+$VERSION = '2.19';
 
 sub new {
   my $class    = shift;
   my $filename = shift;
 
-  my $self = { dists => {} };
+  my $self = { dists => {}, latestdists => {} };
   bless $self, $class;
 
   $filename = '02packages.details.txt' if not defined $filename;
-  $self->filename($filename);
+
+  if ($filename =~ /Description:/) {
+    $self->details($filename);
+  } else {
+    open(IN, $filename) || die "Failed to read $filename: $!";
+    $self->details(join '', <IN>);
+    close(IN);
+  }
 
   $self->parse;
   return $self;
 }
 
 sub parse {
-  my $self     = shift;
-  my $filename = $self->filename;
+  my $self    = shift;
+  my $details = $self->details;
+  $details = (split "\n\n", $details)[1];
 
   my $data;
+  my $latestdists;
 
-  open(IN, $filename) || die "Failed to read $filename: $!";
-  # skip the header
-  while(my $line = <IN>) {
-    last if $line eq "\n";
-  }
-  while(my $line = <IN>) {
-    chomp $line;
+  foreach my $line (split "\n", $details) {
     my($package, $packageversion, $prefix) = split ' ', $line;
     my $m = Parse::CPAN::Packages::Package->new;
     $m->package($package);
@@ -56,9 +60,17 @@ sub parse {
     $m->distribution($dist);
     push @{ $dist->packages }, $m;
 
+    push @{$latestdists->{$dist->dist}}, $dist if $dist->dist;
+
     $data->{$package} = $m;
   }
   close(IN);
+
+  foreach my $dist (keys %$latestdists) {
+    my @dists = @{$latestdists->{$dist}};
+    my $highest_version = (sort { versioncmp($a->version || 0, $b->version || 0) } @dists)[-1];
+    $self->latestdists->{$dist} = $highest_version;
+  }
 
   $self->data($data);
 }
@@ -85,6 +97,17 @@ sub distributions {
   return values %{$self->dists};
 }
 
+sub latest_distribution {
+  my $self = shift;
+  my $dist = shift;
+  return $self->latestdists->{$dist};
+}
+
+sub latest_distributions {
+  my $self = shift;
+  return values %{$self->latestdists};
+}
+
 1;
 
 __END__
@@ -97,8 +120,10 @@ Parse::CPAN::Packages - Parse 02packages.details.txt.gz
 
   use Parse::CPAN::Packages;
 
-  # must have downloading and un-gzip-ed
+  # must have downloaded and un-gzip-ed
   my $p = Parse::CPAN::Packages->new("02packages.details.txt");
+  # either a filename as above or pass in the contents of the file
+  my $p = Parse::CPAN::Packages->new($packages_details_contents);
 
   my $m = $p->package("Acme::Colour");
   # $m is a Parse::CPAN::Packages::Package object
@@ -115,11 +140,19 @@ Parse::CPAN::Packages - Parse 02packages.details.txt.gz
   print $d->cpanid, "\n";    # LBROCARD
   print $d->distvname, "\n"; # Acme-Colour-1.00
 
-  my @packages = $p->packages;
   # all the package objects
+  my @packages = $p->packages;
 
-  my @distributions = $p->distributions;
   # all the distribution objects
+  my @distributions = $p->distributions;
+
+  # the latest distribution
+  $d = $p->latest_distribution("Acme-Colour");
+  is($d->prefix, "L/LB/LBROCARD/Acme-Colour-1.00.tar.gz");
+  is($d->version, "1.00");
+
+  # all the latest distributions
+  my @distributions = $p->latest_distributions;
 
 =head1 DESCRIPTION
 

@@ -1,5 +1,10 @@
 CHANGES file for Parse::CPAN::Packages
 
+2.19 Wed Mar  3 22:21:18 GMT 2004
+  - new methods to get the latest distribution and distributions
+  - possibility to pass the contents of 02packages in addition to the
+    filename
+
 2.17 Wed Feb 25 10:29:07 GMT 2004
   - fix a documentation glitch in the main module
   - make a ->distributions hash available
