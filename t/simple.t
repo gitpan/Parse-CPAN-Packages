@@ -1,14 +1,15 @@
 #!/usr/bin/perl -w
 use strict;
 use lib 'lib';
-use Test::More tests => 12;
+use Test::More tests => 18;
 use_ok("Parse::CPAN::Packages");
 
 my $p = Parse::CPAN::Packages->new("t/02packages.details.txt");
 isa_ok($p, "Parse::CPAN::Packages");
 
 my @packages = sort map { $_->package } $p->packages;
-is_deeply(\@packages, [qw(Acme::Colour Acme::ComeFrom Acme::Comment Acme::CramCode Acme::Currency)]);
+is_deeply(\@packages,
+          [qw(Acme::Colour Acme::ComeFrom Acme::Comment Acme::CramCode Acme::Currency accessors accessors::chained accessors::classic )]);
 
 my $m = $p->package("Acme::Colour");
 is($m->package, "Acme::Colour");
@@ -22,3 +23,22 @@ is($d->maturity, "released");
 is($d->filename, "Acme-Colour-1.00.tar.gz");
 is($d->cpanid, "LBROCARD");
 is($d->distvname, "Acme-Colour-1.00");
+
+is( $p->package("accessors::chained")->distribution->dist, "accessors",
+    "accessors::chained lives in accessors" );
+
+is( $p->package("accessors::classic")->distribution->dist, "accessors",
+    "as does accessors::classic" );
+
+is( $p->package("accessors::chained")->distribution,
+    $p->package("accessors::classic")->distribution,
+    "and they're using the same distribution object" );
+
+my $dist = $p->distribution('S/SP/SPURKIS/accessors-0.02.tar.gz');
+is( $dist->dist, 'accessors' );
+is( $dist, $p->package("accessors::chained")->distribution,
+    "by path match by name" );
+
+is_deeply( [ map { $_->package } $dist->contains ],
+          [ qw( accessors accessors::chained accessors::classic ) ],
+           "dist contains packages" );

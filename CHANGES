@@ -1,4 +1,9 @@
 CHANGES file for Parse::CPAN::Packages
 
+2.17 Wed Feb 25 10:29:07 GMT 2004
+  - fix a documentation glitch in the main module
+  - make a ->distributions hash available
+  - A distribution now contains packages
+
 2.12 Fri Feb 13 18:42:57 GMT 2004
   - first release (suggested by Richard Clamp)

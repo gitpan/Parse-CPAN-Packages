@@ -3,7 +3,7 @@ NAME
 
 SYNOPSIS
       use Parse::CPAN::Packages;
-  
+
       # must have downloading and un-gzip-ed
       my $p = Parse::CPAN::Packages->new("02packages.details.txt");
 
@@ -13,7 +13,7 @@ SYNOPSIS
       print $m->version, "\n";   # 1.00
 
       my $d = $p->distribution;
-      # $d is a Parse::CPAN::Packages::Package object
+      # $d is a Parse::CPAN::Packages::Distribution object
       print $d->prefix, "\n";    # L/LB/LBROCARD/Acme-Colour-1.00.tar.gz
       print $d->dist, "\n";      # Acme-Colour
       print $d->version, "\n";   # 1.00
@@ -21,6 +21,9 @@ SYNOPSIS
       print $d->filename, "\n";  # Acme-Colour-1.00.tar.gz
       print $d->cpanid, "\n";    # LBROCARD
       print $d->distvname, "\n"; # Acme-Colour-1.00
+
+      my @packages = $p->packages;
+      # all the package objects
 
 DESCRIPTION
     The Comprehensive Perl Archive Network (CPAN) is a very useful
