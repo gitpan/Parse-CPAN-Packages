@@ -3,11 +3,12 @@ use strict;
 use base qw( Class::Accessor::Fast );
 __PACKAGE__->mk_accessors(qw( details data dists latestdists ));
 use CPAN::DistnameInfo;
+use Compress::Zlib;
 use IO::Zlib;
 use Parse::CPAN::Packages::Package;
 use Sort::Versions;
 use vars qw($VERSION);
-$VERSION = '2.23';
+$VERSION = '2.24';
 
 sub new {
   my $class    = shift;
@@ -29,11 +30,12 @@ sub _slurp_details {
   if ($filename =~ /Description:/) {
      return $filename;
   } elsif ($filename =~ /\.gz/) {
-
     my $fh = IO::Zlib->new($filename, "rb") || 
 	die "Failed to read $filename: $!";
      return join '', <$fh>;
     $fh->close;
+  } elsif ($filename =~ /^\037\213/) {
+    return uncompress($filename);
   } else {
     open(IN, $filename) || die "Failed to read $filename: $!";
      return join '', <IN>;

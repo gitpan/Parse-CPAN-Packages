@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 use strict;
 use lib 'lib';
-use Test::More tests => 28;
+use Test::More tests => 30;
 use_ok("Parse::CPAN::Packages");
 
 my $p = Parse::CPAN::Packages->new("t/02packages.details.txt");
@@ -75,6 +75,19 @@ is_deeply(\@packages,
           [qw(Acme::Colour Acme::Colour::Old Acme::ComeFrom Acme::Comment Acme::CramCode Acme::Currency accessors accessors::chained accessors::classic )]);
 
 # Try the interface which takes in a .gz 
+
+$p = Parse::CPAN::Packages->new("t/02packages.details.txt.gz");
+isa_ok($p, "Parse::CPAN::Packages");
+
+@packages = sort map { $_->package } $p->packages;
+is_deeply(\@packages,
+          [qw(Acme::Colour Acme::Colour::Old Acme::ComeFrom Acme::Comment Acme::CramCode Acme::Currency accessors accessors::chained accessors::classic )]);
+
+# Try the interface which takes in gzipped contents
+
+open(IN, "t/02packages.details.txt.gz");
+$details = join '', <IN>;
+close(IN);
 
 $p = Parse::CPAN::Packages->new("t/02packages.details.txt.gz");
 isa_ok($p, "Parse::CPAN::Packages");

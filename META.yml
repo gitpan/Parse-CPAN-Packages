@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name: Parse-CPAN-Packages
-version: 2.23
+version: 2.24
 author:
   - Leon Brocard <acme@astray.com>
 abstract: Parse 02packages.details.txt.gz
@@ -15,7 +15,7 @@ build_requires:
 provides:
   Parse::CPAN::Packages:
     file: lib/Parse/CPAN/Packages.pm
-    version: 2.23
+    version: 2.24
   Parse::CPAN::Packages::Distribution:
     file: lib/Parse/CPAN/Packages/Distribution.pm
     version: 2.12

@@ -1,5 +1,8 @@
 CHANGES file for Parse::CPAN::Packages
 
+2.24 Sun Feb  6 10:40:36 GMT 2005
+  - make the new() example in the docs work (spotted by Adam Kennedy)
+
 2.23 Sat Feb  5 17:20:48 GMT 2005
   - the distribution() method is now documented
   - remove an "undefined hash element" warning
