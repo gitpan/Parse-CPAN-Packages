@@ -15,7 +15,7 @@ SYNOPSIS
       print $m->package, "\n";   # Acme::Colour
       print $m->version, "\n";   # 1.00
 
-      my $d = $p->distribution;
+      my $d = $m->distribution();
       # $d is a Parse::CPAN::Packages::Distribution object
       print $d->prefix, "\n";    # L/LB/LBROCARD/Acme-Colour-1.00.tar.gz
       print $d->dist, "\n";      # Acme-Colour

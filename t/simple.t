@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 use strict;
 use lib 'lib';
-use Test::More tests => 25;
+use Test::More tests => 28;
 use_ok("Parse::CPAN::Packages");
 
 my $p = Parse::CPAN::Packages->new("t/02packages.details.txt");
@@ -55,6 +55,11 @@ is_deeply([sort map { $_->prefix } $p->latest_distributions], [
   'S/SP/SPURKIS/accessors-0.02.tar.gz',
   'X/XE/XERN/Acme-CramCode-0.01.tar.gz',
 ]);
+
+# counts
+is($p->package_count(), scalar @packages, "package count");
+is($p->distribution_count(), 7, "dist count");
+is($p->latest_distribution_count(), 6, "latest dist count");
 
 open(IN, "t/02packages.details.txt");
 my $details = join '', <IN>;

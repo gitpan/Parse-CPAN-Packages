@@ -18,4 +18,9 @@ sub contains {
     return @{ $self->packages };
 }
 
+sub add_package {
+    my $self = shift;
+    push @{ $self->packages }, @_;
+}
+
 1;

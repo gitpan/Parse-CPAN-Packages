@@ -1,5 +1,9 @@
 CHANGES file for Parse::CPAN::Packages
 
+2.23 Sat Feb  5 17:20:48 GMT 2005
+  - the distribution() method is now documented
+  - remove an "undefined hash element" warning
+
 2.21 Tue Jun 29 14:57:11 BST 2004
   - now we're able to read the gzipped file directly (using IO::ZLib)
 
