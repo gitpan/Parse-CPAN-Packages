@@ -1,18 +1,19 @@
 --- #YAML:1.0
 name: Parse-CPAN-Packages
-version: 2.19
+version: 2.20
 author:
   - Leon Brocard <acme@astray.com>
 abstract: Parse 02packages.details.txt.gz
 license: perl
 requires:
   CPAN::DistnameInfo: 0
-  Class::Accessor::Chained: 0
+  Class::Accessor::Fast: 0
+  Sort::Versions: 0
   Test::More: 0
 provides:
   Parse::CPAN::Packages:
     file: lib/Parse/CPAN/Packages.pm
-    version: 2.19
+    version: 2.20
   Parse::CPAN::Packages::Distribution:
     file: lib/Parse/CPAN/Packages/Distribution.pm
     version: 2.12

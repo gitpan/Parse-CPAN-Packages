@@ -47,13 +47,13 @@ $d = $p->latest_distribution("Acme-Colour");
 is($d->prefix, "L/LB/LBROCARD/Acme-Colour-1.00.tar.gz");
 is($d->version, "1.00");
 
-is_deeply([map { $_->prefix } $p->latest_distributions], [
+is_deeply([sort map { $_->prefix } $p->latest_distributions], [
   'A/AU/AUTRIJUS/Acme-ComeFrom-0.07.tar.gz',
-  'X/XE/XERN/Acme-CramCode-0.01.tar.gz',
-  'S/SM/SMUELLER/Acme-Currency-0.01.tar.gz',
-  'L/LB/LBROCARD/Acme-Colour-1.00.tar.gz',
   'K/KA/KANE/Acme-Comment-1.02.tar.gz',
-  'S/SP/SPURKIS/accessors-0.02.tar.gz'
+  'L/LB/LBROCARD/Acme-Colour-1.00.tar.gz',
+  'S/SM/SMUELLER/Acme-Currency-0.01.tar.gz',
+  'S/SP/SPURKIS/accessors-0.02.tar.gz',
+  'X/XE/XERN/Acme-CramCode-0.01.tar.gz',
 ]);
 
 open(IN, "t/02packages.details.txt");

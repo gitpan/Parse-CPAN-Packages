@@ -1,6 +1,6 @@
 package Parse::CPAN::Packages::Package;
 use strict;
-use base qw( Class::Accessor::Chained );
+use base qw( Class::Accessor::Fast );
  __PACKAGE__->mk_accessors(qw( package version prefix distribution ));
 use Parse::CPAN::Packages::Distribution;
 use vars qw($VERSION);

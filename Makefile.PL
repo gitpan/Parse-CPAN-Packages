@@ -8,8 +8,9 @@ WriteMakefile
           'VERSION_FROM' => 'lib/Parse/CPAN/Packages.pm',
           'PREREQ_PM' => {
                            'Test::More' => 0,
-                           'Class::Accessor::Chained' => 0,
-                           'CPAN::DistnameInfo' => 0
+                           'Sort::Versions' => 0,
+                           'CPAN::DistnameInfo' => 0,
+                           'Class::Accessor::Fast' => 0
                          }
         )
 ;

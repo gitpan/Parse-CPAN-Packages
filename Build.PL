@@ -6,9 +6,10 @@ my $build = Module::Build->new(
   license     => 'perl',
   module_name => 'Parse::CPAN::Packages',
   requires    => {
-    'Class::Accessor::Chained' => 0,
+    'Class::Accessor::Fast' => 0,
     'CPAN::DistnameInfo' => 0,
     'Test::More'         => 0,
+    'Sort::Versions'     => 0,
 },
 );
 $build->create_build_script;

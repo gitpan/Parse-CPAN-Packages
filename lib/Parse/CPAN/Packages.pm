@@ -1,12 +1,12 @@
 package Parse::CPAN::Packages;
 use strict;
-use base qw( Class::Accessor::Chained );
+use base qw( Class::Accessor::Fast );
 __PACKAGE__->mk_accessors(qw( details data dists latestdists ));
 use CPAN::DistnameInfo;
 use Parse::CPAN::Packages::Package;
 use Sort::Versions;
 use vars qw($VERSION);
-$VERSION = '2.19';
+$VERSION = '2.20';
 
 sub new {
   my $class    = shift;
@@ -46,7 +46,6 @@ sub parse {
     my $dist = $self->dists->{ $prefix } ||= do {
       my $d = Parse::CPAN::Packages::Distribution->new;
       my $i = CPAN::DistnameInfo->new($prefix);
-
       $d->prefix($prefix);
       $d->dist($i->dist);
       $d->version($i->version);
