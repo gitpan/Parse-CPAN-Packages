@@ -4,9 +4,10 @@ NAME
 SYNOPSIS
       use Parse::CPAN::Packages;
 
-      # must have downloaded and un-gzip-ed
-      my $p = Parse::CPAN::Packages->new("02packages.details.txt");
+      # must have downloaded
+      my $p = Parse::CPAN::Packages->new("02packages.details.txt.gz");
       # either a filename as above or pass in the contents of the file
+      # (uncompressed)
       my $p = Parse::CPAN::Packages->new($packages_details_contents);
 
       my $m = $p->package("Acme::Colour");
@@ -45,10 +46,10 @@ DESCRIPTION
     "modules" directory. This file contains lots of useful information and
     this module provides a simple interface to the data contained within.
 
-    Note that this module does not concern itself with downloading or
-    unpacking this file. You should do this yourself.
+    Note that this module does not concern itself with downloading this
+    file. You should do this yourself.
 
-    The constructor takes the path to the 02packages.details.txt file. It
+    The constructor takes the path to the 02packages.details.txt.gz file. It
     defaults to loading the file from the current directory.
 
     In a future release Parse::CPAN::Packages::Package and

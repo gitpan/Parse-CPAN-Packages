@@ -8,6 +8,7 @@ my $build = Module::Build->new(
   requires    => {
     'Class::Accessor::Fast' => 0,
     'CPAN::DistnameInfo' => 0,
+    'IO::Zlib'           => 0,
     'Test::More'         => 0,
     'Sort::Versions'     => 0,
 },

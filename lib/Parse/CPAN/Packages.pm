@@ -3,10 +3,11 @@ use strict;
 use base qw( Class::Accessor::Fast );
 __PACKAGE__->mk_accessors(qw( details data dists latestdists ));
 use CPAN::DistnameInfo;
+use IO::Zlib;
 use Parse::CPAN::Packages::Package;
 use Sort::Versions;
 use vars qw($VERSION);
-$VERSION = '2.20';
+$VERSION = '2.21';
 
 sub new {
   my $class    = shift;
@@ -15,10 +16,16 @@ sub new {
   my $self = { dists => {}, latestdists => {} };
   bless $self, $class;
 
-  $filename = '02packages.details.txt' if not defined $filename;
+  $filename = '02packages.details.txt.gz' if not defined $filename;
 
   if ($filename =~ /Description:/) {
     $self->details($filename);
+  } elsif ($filename =~ /\.gz/) {
+
+    my $fh = IO::Zlib->new($filename, "rb") || 
+	die "Failed to read $filename: $!";
+    $self->details(join '', <$fh>);
+    $fh->close;
   } else {
     open(IN, $filename) || die "Failed to read $filename: $!";
     $self->details(join '', <IN>);
@@ -119,9 +126,10 @@ Parse::CPAN::Packages - Parse 02packages.details.txt.gz
 
   use Parse::CPAN::Packages;
 
-  # must have downloaded and un-gzip-ed
-  my $p = Parse::CPAN::Packages->new("02packages.details.txt");
+  # must have downloaded
+  my $p = Parse::CPAN::Packages->new("02packages.details.txt.gz");
   # either a filename as above or pass in the contents of the file
+  # (uncompressed)
   my $p = Parse::CPAN::Packages->new($packages_details_contents);
 
   my $m = $p->package("Acme::Colour");
@@ -161,11 +169,11 @@ hosts, including a file named "02packages.details.txt.gz" in the
 "modules" directory. This file contains lots of useful information and
 this module provides a simple interface to the data contained within.
 
-Note that this module does not concern itself with downloading or
-unpacking this file. You should do this yourself.
+Note that this module does not concern itself with downloading this
+file. You should do this yourself.
 
-The constructor takes the path to the 02packages.details.txt file. It
-defaults to loading the file from the current directory.
+The constructor takes the path to the 02packages.details.txt.gz
+file. It defaults to loading the file from the current directory.
 
 In a future release L<Parse::CPAN::Packages::Package> and
 L<Parse::CPAN::Packages::Distribution> might have more information.

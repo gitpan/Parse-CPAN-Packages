@@ -8,4 +8,5 @@ MANIFEST			This list of files
 META.yml
 README
 t/02packages.details.txt
+t/02packages.details.txt.gz
 t/simple.t
