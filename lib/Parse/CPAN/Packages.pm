@@ -8,10 +8,10 @@ use IO::Zlib;
 use Parse::CPAN::Packages::Package;
 use Sort::Versions;
 use vars qw($VERSION);
-$VERSION = '2.24';
+$VERSION = '2.25';
 
 sub new {
-  my $class    = shift;
+  my $class = shift;
 
   my $self = { data => {}, dists => {}, latestdists => {} };
   bless $self, $class;
@@ -25,20 +25,19 @@ sub new {
 # read the file into memory and return it
 sub _slurp_details {
   my $self     = shift;
-  my $filename = (@_) ? shift : "02packages.details.txt.gz";
+  my $filename = (@_) ? shift: "02packages.details.txt.gz";
 
   if ($filename =~ /Description:/) {
-     return $filename;
+    return $filename;
   } elsif ($filename =~ /\.gz/) {
-    my $fh = IO::Zlib->new($filename, "rb") || 
-	die "Failed to read $filename: $!";
-     return join '', <$fh>;
-    $fh->close;
+    my $fh = IO::Zlib->new($filename, "rb")
+      || die "Failed to read $filename: $!";
+    return join '', <$fh>;
   } elsif ($filename =~ /^\037\213/) {
-    return uncompress($filename);
+    return Compress::Zlib::memGunzip($filename);
   } else {
     open(IN, $filename) || die "Failed to read $filename: $!";
-     return join '', <IN>;
+    return join '', <IN>;
     close(IN);
   }
 }
@@ -54,14 +53,14 @@ sub parse {
   foreach my $line (split "\n", $details) {
 
     # make a package object from the line
-    my($package_name, $package_version, $prefix) = split ' ', $line;
+    my ($package_name, $package_version, $prefix) = split ' ', $line;
     $self->add_quick($package_name, $package_version, $prefix);
   }
 }
 
 sub add_quick {
   my $self = shift;
-  my($package_name, $package_version, $prefix) = @_;
+  my ($package_name, $package_version, $prefix) = @_;
 
   # create the package object
   my $m = Parse::CPAN::Packages::Package->new;
@@ -81,8 +80,7 @@ sub add_quick {
   $self->add_package($m);
 }
 
-sub distribution_from_prefix
-{
+sub distribution_from_prefix {
   my $self   = shift;
   my $prefix = shift;
 
@@ -108,7 +106,7 @@ sub add_package {
   my $package = shift;
 
   # store it
-  $self->data->{$package->package} = $package;
+  $self->data->{ $package->package } = $package;
 
   return $self;
 }
@@ -121,31 +119,31 @@ sub package {
 
 sub packages {
   my $self = shift;
-  return values %{$self->data};
+  return values %{ $self->data };
 }
 
 sub add_distribution {
-  my $self   = shift;
-  my $dist   = shift;
+  my $self = shift;
+  my $dist = shift;
 
   $self->_store_distribution($dist);
   $self->_ensure_latest_distribution($dist);
 }
 
 sub _store_distribution {
-  my $self   = shift;
-  my $dist   = shift;
+  my $self = shift;
+  my $dist = shift;
 
-  $self->dists->{$dist->prefix} = $dist;
+  $self->dists->{ $dist->prefix } = $dist;
 }
 
-sub _ensure_latest_distribution
-{
+sub _ensure_latest_distribution {
   my $self = shift;
   local $a = shift;
   local $b = $self->latest_distribution($a->dist);
-  if (!defined($b) or
-      versioncmp($a->version || 0, $b->version || 0) > 0) {
+  if (!defined($b)
+    or versioncmp($a->version || 0, $b->version || 0) > 0)
+  {
     $self->_set_latest_distribution($a);
   }
 }
@@ -158,15 +156,14 @@ sub distribution {
 
 sub distributions {
   my $self = shift;
-  return values %{$self->dists};
+  return values %{ $self->dists };
 }
 
-sub _set_latest_distribution
-{
+sub _set_latest_distribution {
   my $self = shift;
   my $dist = shift;
   return unless $dist->dist;
-  $self->latestdists->{$dist->dist} = $dist;
+  $self->latestdists->{ $dist->dist } = $dist;
 }
 
 sub latest_distribution {
@@ -178,22 +175,22 @@ sub latest_distribution {
 
 sub latest_distributions {
   my $self = shift;
-  return values %{$self->latestdists};
+  return values %{ $self->latestdists };
 }
 
 sub package_count {
   my $self = shift;
-  return scalar scalar $self->packages
+  return scalar scalar $self->packages;
 }
 
 sub distribution_count {
   my $self = shift;
-  return scalar $self->distributions
+  return scalar $self->distributions;
 }
 
 sub latest_distribution_count {
   my $self = shift;
-  return scalar $self->latest_distributions
+  return scalar $self->latest_distributions;
 }
 
 1;

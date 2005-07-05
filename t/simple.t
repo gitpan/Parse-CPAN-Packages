@@ -89,7 +89,7 @@ open(IN, "t/02packages.details.txt.gz");
 $details = join '', <IN>;
 close(IN);
 
-$p = Parse::CPAN::Packages->new("t/02packages.details.txt.gz");
+$p = Parse::CPAN::Packages->new($details);
 isa_ok($p, "Parse::CPAN::Packages");
 
 @packages = sort map { $_->package } $p->packages;
