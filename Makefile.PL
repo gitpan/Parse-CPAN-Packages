@@ -8,8 +8,8 @@ WriteMakefile
                            'CPAN::DistnameInfo' => '0',
                            'Class::Accessor::Fast' => '0',
                            'IO::Zlib' => '0',
-                           'Sort::Versions' => '0',
-                           'Test::More' => '0'
+                           'Test::More' => '0',
+                           'version' => '0'
                          },
           'INSTALLDIRS' => 'site',
           'PL_FILES' => {}

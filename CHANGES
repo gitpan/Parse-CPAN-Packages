@@ -1,5 +1,10 @@
 CHANGES file for Parse::CPAN::Packages
 
+2.26 Wed Jun 14 07:31:26 BST 2006
+  - use version.pm (or number comparison if that fails) instead of
+    Sort::Versions for latest_distribution() (spotted by Thomas Klausner)
+  - run perltidy on the source
+
 2.25 Tue Jul  5 01:16:48 BST 2005
   - fix bug where passing in the gz contents was not working
 

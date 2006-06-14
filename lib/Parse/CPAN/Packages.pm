@@ -6,191 +6,204 @@ use CPAN::DistnameInfo;
 use Compress::Zlib;
 use IO::Zlib;
 use Parse::CPAN::Packages::Package;
-use Sort::Versions;
+use version;
 use vars qw($VERSION);
-$VERSION = '2.25';
+$VERSION = '2.26';
 
 sub new {
-  my $class = shift;
+    my $class = shift;
 
-  my $self = { data => {}, dists => {}, latestdists => {} };
-  bless $self, $class;
+    my $self = { data => {}, dists => {}, latestdists => {} };
+    bless $self, $class;
 
-  # read the file then parse it if present
-  $self->parse(shift) if @_;
+    # read the file then parse it if present
+    $self->parse(shift) if @_;
 
-  return $self;
+    return $self;
 }
 
 # read the file into memory and return it
 sub _slurp_details {
-  my $self     = shift;
-  my $filename = (@_) ? shift: "02packages.details.txt.gz";
+    my $self     = shift;
+    my $filename = (@_) ? shift: "02packages.details.txt.gz";
 
-  if ($filename =~ /Description:/) {
-    return $filename;
-  } elsif ($filename =~ /\.gz/) {
-    my $fh = IO::Zlib->new($filename, "rb")
-      || die "Failed to read $filename: $!";
-    return join '', <$fh>;
-  } elsif ($filename =~ /^\037\213/) {
-    return Compress::Zlib::memGunzip($filename);
-  } else {
-    open(IN, $filename) || die "Failed to read $filename: $!";
-    return join '', <IN>;
-    close(IN);
-  }
+    if ( $filename =~ /Description:/ ) {
+        return $filename;
+    } elsif ( $filename =~ /\.gz/ ) {
+        my $fh = IO::Zlib->new( $filename, "rb" )
+            || die "Failed to read $filename: $!";
+        return join '', <$fh>;
+    } elsif ( $filename =~ /^\037\213/ ) {
+        return Compress::Zlib::memGunzip($filename);
+    } else {
+        open( IN, $filename ) || die "Failed to read $filename: $!";
+        return join '', <IN>;
+        close(IN);
+    }
 }
 
 sub parse {
-  my $self    = shift;
-  my $details = $self->_slurp_details(shift);
+    my $self    = shift;
+    my $details = $self->_slurp_details(shift);
 
-  # remove the preamble
-  $details = (split "\n\n", $details)[1];
+    # remove the preamble
+    $details = ( split "\n\n", $details )[1];
 
-  # run though each line of the file
-  foreach my $line (split "\n", $details) {
+    # run though each line of the file
+    foreach my $line ( split "\n", $details ) {
 
-    # make a package object from the line
-    my ($package_name, $package_version, $prefix) = split ' ', $line;
-    $self->add_quick($package_name, $package_version, $prefix);
-  }
+        # make a package object from the line
+        my ( $package_name, $package_version, $prefix ) = split ' ', $line;
+        $self->add_quick( $package_name, $package_version, $prefix );
+    }
 }
 
 sub add_quick {
-  my $self = shift;
-  my ($package_name, $package_version, $prefix) = @_;
+    my $self = shift;
+    my ( $package_name, $package_version, $prefix ) = @_;
 
-  # create the package object
-  my $m = Parse::CPAN::Packages::Package->new;
-  $m->package($package_name);
-  $m->version($package_version);
+    # create the package object
+    my $m = Parse::CPAN::Packages::Package->new;
+    $m->package($package_name);
+    $m->version($package_version);
 
-  # create a distribution object (or get an existing one)
-  my $dist = $self->distribution_from_prefix($prefix);
+    # create a distribution object (or get an existing one)
+    my $dist = $self->distribution_from_prefix($prefix);
 
-  # make the package have the distribion and the distribution
-  # have the package.  Yes, this creates a cirtular reference.  eek!
-  $m->distribution($dist);
-  $dist->add_package($m);
+    # make the package have the distribion and the distribution
+    # have the package.  Yes, this creates a cirtular reference.  eek!
+    $m->distribution($dist);
+    $dist->add_package($m);
 
-  # record this distribution and package
-  $self->add_distribution($dist);
-  $self->add_package($m);
+    # record this distribution and package
+    $self->add_distribution($dist);
+    $self->add_package($m);
 }
 
 sub distribution_from_prefix {
-  my $self   = shift;
-  my $prefix = shift;
+    my $self   = shift;
+    my $prefix = shift;
 
-  # see if we have one of these already and return it if we do.
-  my $d = $self->distribution($prefix);
-  return $d if $d;
+    # see if we have one of these already and return it if we do.
+    my $d = $self->distribution($prefix);
+    return $d if $d;
 
-  # create a new one otherwise
-  $d = Parse::CPAN::Packages::Distribution->new;
-  my $i = CPAN::DistnameInfo->new($prefix);
-  $d->prefix($prefix);
-  $d->dist($i->dist);
-  $d->version($i->version);
-  $d->maturity($i->maturity);
-  $d->filename($i->filename);
-  $d->cpanid($i->cpanid);
-  $d->distvname($i->distvname);
-  return $d;
+    # create a new one otherwise
+    $d = Parse::CPAN::Packages::Distribution->new;
+    my $i = CPAN::DistnameInfo->new($prefix);
+    $d->prefix($prefix);
+    $d->dist( $i->dist );
+    $d->version( $i->version );
+    $d->maturity( $i->maturity );
+    $d->filename( $i->filename );
+    $d->cpanid( $i->cpanid );
+    $d->distvname( $i->distvname );
+    return $d;
 }
 
 sub add_package {
-  my $self    = shift;
-  my $package = shift;
+    my $self    = shift;
+    my $package = shift;
 
-  # store it
-  $self->data->{ $package->package } = $package;
+    # store it
+    $self->data->{ $package->package } = $package;
 
-  return $self;
+    return $self;
 }
 
 sub package {
-  my $self         = shift;
-  my $package_name = shift;
-  return $self->data->{$package_name};
+    my $self         = shift;
+    my $package_name = shift;
+    return $self->data->{$package_name};
 }
 
 sub packages {
-  my $self = shift;
-  return values %{ $self->data };
+    my $self = shift;
+    return values %{ $self->data };
 }
 
 sub add_distribution {
-  my $self = shift;
-  my $dist = shift;
+    my $self = shift;
+    my $dist = shift;
 
-  $self->_store_distribution($dist);
-  $self->_ensure_latest_distribution($dist);
+    $self->_store_distribution($dist);
+    $self->_ensure_latest_distribution($dist);
 }
 
 sub _store_distribution {
-  my $self = shift;
-  my $dist = shift;
+    my $self = shift;
+    my $dist = shift;
 
-  $self->dists->{ $dist->prefix } = $dist;
+    $self->dists->{ $dist->prefix } = $dist;
 }
 
 sub _ensure_latest_distribution {
-  my $self = shift;
-  local $a = shift;
-  local $b = $self->latest_distribution($a->dist);
-  if (!defined($b)
-    or versioncmp($a->version || 0, $b->version || 0) > 0)
-  {
-    $self->_set_latest_distribution($a);
-  }
+    my $self = shift;
+    local $a = shift;
+    local $b = $self->latest_distribution( $a->dist );
+    unless ($b) {
+        $self->_set_latest_distribution($a);
+        return;
+    }
+    my ( $av, $bv );
+    eval {
+        $av = version->new( $a->version || 0 );
+        $bv = version->new( $a->version || 0 );
+    };
+    if ( $av && $bv ) {
+        if ( $av > $bv ) {
+            $self->_set_latest_distribution($a);
+        }
+    } else {
+        if ( $a->dist > $b->dist ) {
+            $self->_set_latest_distribution($a);
+        }
+    }
 }
 
 sub distribution {
-  my $self = shift;
-  my $dist = shift;
-  return $self->dists->{$dist};
+    my $self = shift;
+    my $dist = shift;
+    return $self->dists->{$dist};
 }
 
 sub distributions {
-  my $self = shift;
-  return values %{ $self->dists };
+    my $self = shift;
+    return values %{ $self->dists };
 }
 
 sub _set_latest_distribution {
-  my $self = shift;
-  my $dist = shift;
-  return unless $dist->dist;
-  $self->latestdists->{ $dist->dist } = $dist;
+    my $self = shift;
+    my $dist = shift;
+    return unless $dist->dist;
+    $self->latestdists->{ $dist->dist } = $dist;
 }
 
 sub latest_distribution {
-  my $self = shift;
-  my $dist = shift;
-  return unless $dist;
-  return $self->latestdists->{$dist};
+    my $self = shift;
+    my $dist = shift;
+    return unless $dist;
+    return $self->latestdists->{$dist};
 }
 
 sub latest_distributions {
-  my $self = shift;
-  return values %{ $self->latestdists };
+    my $self = shift;
+    return values %{ $self->latestdists };
 }
 
 sub package_count {
-  my $self = shift;
-  return scalar scalar $self->packages;
+    my $self = shift;
+    return scalar scalar $self->packages;
 }
 
 sub distribution_count {
-  my $self = shift;
-  return scalar $self->distributions;
+    my $self = shift;
+    return scalar $self->distributions;
 }
 
 sub latest_distribution_count {
-  my $self = shift;
-  return scalar $self->latest_distributions;
+    my $self = shift;
+    return scalar $self->latest_distributions;
 }
 
 1;
@@ -307,10 +320,10 @@ Returns the number of distributions stored.
 
 =item latest_distribution($distname)
 
-Returns the C<Parse::CPAN::Distribution> that represents the
-latest distribution for the named disribution passed, that is
-to say it returns the distribution that has the highest version
-number (as determined by Sort::Version):
+Returns the C<Parse::CPAN::Distribution> that represents the latest
+distribution for the named disribution passed, that is to say it
+returns the distribution that has the highest version number (as
+determined by version.pm or number comparison if that fails):
 
   my $p = Parse::CPAN::Distribution->new($gzfilename);
   my $dist = $p->distribution('Acme-Color');
