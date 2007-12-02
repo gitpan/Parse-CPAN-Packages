@@ -8,7 +8,7 @@ use IO::Zlib;
 use Parse::CPAN::Packages::Package;
 use version;
 use vars qw($VERSION);
-$VERSION = '2.26';
+$VERSION = '2.27';
 
 sub new {
     my $class = shift;
@@ -148,7 +148,7 @@ sub _ensure_latest_distribution {
     my ( $av, $bv );
     eval {
         $av = version->new( $a->version || 0 );
-        $bv = version->new( $a->version || 0 );
+        $bv = version->new( $b->version || 0 );
     };
     if ( $av && $bv ) {
         if ( $av > $bv ) {

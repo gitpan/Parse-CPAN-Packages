@@ -1,4 +1,3 @@
-Build.PL
 CHANGES
 lib/Parse/CPAN/Packages.pm
 lib/Parse/CPAN/Packages/Distribution.pm

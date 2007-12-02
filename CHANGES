@@ -1,5 +1,9 @@
 CHANGES file for Parse::CPAN::Packages
 
+2.27 Sun Dec  2 14:50:14 GMT 2007
+  - fix typo in _ensure_latest_distribution (patch by Kenichi Ishigaki)
+  - stop using Module::Build
+
 2.26 Wed Jun 14 07:31:26 BST 2006
   - use version.pm (or number comparison if that fails) instead of
     Sort::Versions for latest_distribution() (spotted by Thomas Klausner)
