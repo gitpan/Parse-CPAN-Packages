@@ -1,5 +1,8 @@
 CHANGES file for Parse::CPAN::Packages
 
+2.28 Tue Aug 12 08:02:22 BST 2008
+  - stop version.pm warnings 
+
 2.27 Sun Dec  2 14:50:14 GMT 2007
   - fix typo in _ensure_latest_distribution (patch by Kenichi Ishigaki)
   - stop using Module::Build

@@ -8,7 +8,7 @@ use IO::Zlib;
 use Parse::CPAN::Packages::Package;
 use version;
 use vars qw($VERSION);
-$VERSION = '2.27';
+$VERSION = '2.28';
 
 sub new {
     my $class = shift;
@@ -24,8 +24,8 @@ sub new {
 
 # read the file into memory and return it
 sub _slurp_details {
-    my $self     = shift;
-    my $filename = (@_) ? shift: "02packages.details.txt.gz";
+    my $self = shift;
+    my $filename = (@_) ? shift : "02packages.details.txt.gz";
 
     if ( $filename =~ /Description:/ ) {
         return $filename;
@@ -146,6 +146,7 @@ sub _ensure_latest_distribution {
         return;
     }
     my ( $av, $bv );
+    local $^W = 0;    # stop version.pm warnings
     eval {
         $av = version->new( $a->version || 0 );
         $bv = version->new( $b->version || 0 );

@@ -1,11 +1,11 @@
 --- #YAML:1.0
 name:                Parse-CPAN-Packages
-version:             2.27
+version:             2.28
 abstract:            ~
 license:             perl
 author:              
     - Leon Brocard <acme@astray.com>
-generated_by:        ExtUtils::MakeMaker version 6.38
+generated_by:        ExtUtils::MakeMaker version 6.44
 distribution_type:   module
 requires:     
     Class::Accessor::Fast:         0
