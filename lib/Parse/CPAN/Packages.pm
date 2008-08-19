@@ -8,12 +8,12 @@ use IO::Zlib;
 use Parse::CPAN::Packages::Package;
 use version;
 use vars qw($VERSION);
-$VERSION = '2.28';
+$VERSION = '2.29';
 
 sub new {
     my $class = shift;
 
-    my $self = { data => {}, dists => {}, latestdists => {} };
+    my $self = { data => {}, dists => {}, latestdists => {}, preamble => {} };
     bless $self, $class;
 
     # read the file then parse it if present
@@ -42,15 +42,31 @@ sub _slurp_details {
     }
 }
 
+foreach my $subname (
+    qw(file url description columns intended_for written_by line_count last_updated)
+    )
+{
+    no strict 'refs';
+    *{$subname} = sub { return shift->{preamble}{$subname} };
+}
+
 sub parse {
     my $self    = shift;
     my $details = $self->_slurp_details(shift);
 
-    # remove the preamble
-    $details = ( split "\n\n", $details )[1];
+    # read the preamble
+    my @details = split "\n", $details;
+    while (@details) {
+        local $_ = shift @details;
+        last if /^\s*$/;
+        next unless /^([^:]+):\s*(.*)/;
+        my ( $key, $value ) = ( lc($1), $2 );
+        $key =~ tr/-/_/;
+        $self->{preamble}{$key} = $value;
+    }
 
     # run though each line of the file
-    foreach my $line ( split "\n", $details ) {
+    foreach my $line (@details) {
 
         # make a package object from the line
         my ( $package_name, $package_version, $prefix ) = split ' ', $line;
@@ -310,7 +326,7 @@ filename passed:
   my $p = Parse::CPAN::Distribution->new($gzfilename);
   my $dist = $p->distribution('L/LB/LBROCARD/Acme-Colour-1.00.tar.gz');
 
-=item distrbutions()
+=item distributions()
 
 Returns a list of B<Parse::CPAN::Distribution> objects representing
 all the known distributions.
@@ -337,6 +353,32 @@ all the latest distributions.
 =item latest_distribution_count()
 
 Returns the number of distributions stored.
+
+=back
+
+=head2 Preamble Methods
+
+These methods return the information from the preamble
+at the start of the file. They return undef if for any reason
+no matching preamble line was found.
+
+=over
+
+=item file()
+
+=item url()
+
+=item description()
+
+=item columns()
+
+=item intended_for()
+
+=item written_by()
+
+=item line_count()
+
+=item last_updated()
 
 =back
 
@@ -383,7 +425,7 @@ Leon Brocard <acme@astray.com>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2004, Leon Brocard
+Copyright (C) 2004-8, Leon Brocard
 
 This module is free software; you can redistribute it or modify it under
 the same terms as Perl itself.

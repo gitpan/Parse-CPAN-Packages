@@ -1,7 +1,7 @@
 #!/usr/bin/perl -w
 use strict;
 use lib 'lib';
-use Test::More tests => 30;
+use Test::More tests => 38;
 use_ok("Parse::CPAN::Packages");
 
 my $p = Parse::CPAN::Packages->new("t/02packages.details.txt");
@@ -13,6 +13,19 @@ is_deeply(
     [   qw(Acme::Colour Acme::Colour::Old Acme::ComeFrom Acme::Comment Acme::CramCode Acme::Currency accessors accessors::chained accessors::classic )
     ]
 );
+
+is( $p->file, '02packages.details.txt', 'file' );
+is( $p->url, 'http://www.perl.com/CPAN/modules/02packages.details.txt',
+    'url' );
+is( $p->description, 'Package names found in directory $CPAN/authors/id/',
+    'description' );
+is( $p->columns, 'package name, version, path', 'columns' );
+is( $p->intended_for, 'Automated fetch routines, namespace documentation.',
+    'intended for' );
+is( $p->written_by, 'Id: mldistwatch 479 2004-01-04 13:29:05Z k ',
+    'written by' );
+is( $p->line_count, 23609, 'line count' );
+is( $p->last_updated, 'Fri, 13 Feb 2004 13:50:21 GMT', 'last updated' );
 
 my $m = $p->package("Acme::Colour");
 is( $m->package, "Acme::Colour" );
