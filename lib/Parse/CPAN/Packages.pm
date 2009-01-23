@@ -1,38 +1,41 @@
 package Parse::CPAN::Packages;
-use strict;
-use base qw( Class::Accessor::Fast );
-__PACKAGE__->mk_accessors(qw( details data dists latestdists ));
+use Moose;
 use CPAN::DistnameInfo;
 use Compress::Zlib;
-use IO::Zlib;
+use Parse::CPAN::Packages::Distribution;
 use Parse::CPAN::Packages::Package;
 use version;
-use vars qw($VERSION);
-$VERSION = '2.29';
+our $VERSION = '2.30';
+
+has 'details'     => ( is => 'rw', isa => 'HashRef', default => sub { {} } );
+has 'data'        => ( is => 'rw', isa => 'HashRef', default => sub { {} } );
+has 'dists'       => ( is => 'rw', isa => 'HashRef', default => sub { {} } );
+has 'latestdists' => ( is => 'rw', isa => 'HashRef', default => sub { {} } );
+
+__PACKAGE__->meta->make_immutable;
 
 sub new {
-    my $class = shift;
-
-    my $self = { data => {}, dists => {}, latestdists => {}, preamble => {} };
-    bless $self, $class;
+    my ( $class, $filename ) = @_;
+    my $self = $class->SUPER::new();
 
     # read the file then parse it if present
-    $self->parse(shift) if @_;
+    $self->parse($filename) if $filename;
 
     return $self;
 }
 
 # read the file into memory and return it
 sub _slurp_details {
-    my $self = shift;
-    my $filename = (@_) ? shift : "02packages.details.txt.gz";
+    my ( $self, $filename ) = @_;
+    $filename ||= '02packages.details.txt.gz';
 
     if ( $filename =~ /Description:/ ) {
         return $filename;
     } elsif ( $filename =~ /\.gz/ ) {
-        my $fh = IO::Zlib->new( $filename, "rb" )
-            || die "Failed to read $filename: $!";
-        return join '', <$fh>;
+        open( IN, $filename ) || die "Failed to read $filename: $!";
+        my $data = join '', <IN>;
+        close(IN);
+        return Compress::Zlib::memGunzip($data);
     } elsif ( $filename =~ /^\037\213/ ) {
         return Compress::Zlib::memGunzip($filename);
     } else {
@@ -51,8 +54,8 @@ foreach my $subname (
 }
 
 sub parse {
-    my $self    = shift;
-    my $details = $self->_slurp_details(shift);
+    my ( $self, $filename ) = @_;
+    my $details = $self->_slurp_details($filename);
 
     # read the preamble
     my @details = split "\n", $details;
@@ -75,20 +78,21 @@ sub parse {
 }
 
 sub add_quick {
-    my $self = shift;
-    my ( $package_name, $package_version, $prefix ) = @_;
-
-    # create the package object
-    my $m = Parse::CPAN::Packages::Package->new;
-    $m->package($package_name);
-    $m->version($package_version);
+    my ( $self, $package_name, $package_version, $prefix ) = @_;
 
     # create a distribution object (or get an existing one)
     my $dist = $self->distribution_from_prefix($prefix);
 
+    # create the package object
+    my $m = Parse::CPAN::Packages::Package->new(
+        {   package      => $package_name,
+            version      => $package_version,
+            distribution => $dist
+        }
+    );
+
     # make the package have the distribion and the distribution
     # have the package.  Yes, this creates a cirtular reference.  eek!
-    $m->distribution($dist);
     $dist->add_package($m);
 
     # record this distribution and package
@@ -97,29 +101,29 @@ sub add_quick {
 }
 
 sub distribution_from_prefix {
-    my $self   = shift;
-    my $prefix = shift;
+    my ( $self, $prefix ) = @_;
 
     # see if we have one of these already and return it if we do.
     my $d = $self->distribution($prefix);
     return $d if $d;
 
     # create a new one otherwise
-    $d = Parse::CPAN::Packages::Distribution->new;
     my $i = CPAN::DistnameInfo->new($prefix);
-    $d->prefix($prefix);
-    $d->dist( $i->dist );
-    $d->version( $i->version );
-    $d->maturity( $i->maturity );
-    $d->filename( $i->filename );
-    $d->cpanid( $i->cpanid );
-    $d->distvname( $i->distvname );
+    $d = Parse::CPAN::Packages::Distribution->new(
+        {   prefix    => $prefix,
+            dist      => $i->dist,
+            version   => $i->version,
+            maturity  => $i->maturity,
+            filename  => $i->filename,
+            cpanid    => $i->cpanid,
+            distvname => $i->distvname
+        }
+    );
     return $d;
 }
 
 sub add_package {
-    my $self    = shift;
-    my $package = shift;
+    my ( $self, $package ) = @_;
 
     # store it
     $self->data->{ $package->package } = $package;
@@ -128,8 +132,7 @@ sub add_package {
 }
 
 sub package {
-    my $self         = shift;
-    my $package_name = shift;
+    my ( $self, $package_name ) = @_;
     return $self->data->{$package_name};
 }
 
@@ -139,48 +142,49 @@ sub packages {
 }
 
 sub add_distribution {
-    my $self = shift;
-    my $dist = shift;
+    my ( $self, $dist ) = @_;
 
     $self->_store_distribution($dist);
     $self->_ensure_latest_distribution($dist);
 }
 
 sub _store_distribution {
-    my $self = shift;
-    my $dist = shift;
+    my ( $self, $dist ) = @_;
 
     $self->dists->{ $dist->prefix } = $dist;
 }
 
 sub _ensure_latest_distribution {
-    my $self = shift;
-    local $a = shift;
-    local $b = $self->latest_distribution( $a->dist );
-    unless ($b) {
-        $self->_set_latest_distribution($a);
+    my ( $self, $new ) = @_;
+
+    my $latest = $self->latest_distribution( $new->dist );
+    unless ($latest) {
+        $self->_set_latest_distribution($new);
         return;
     }
-    my ( $av, $bv );
-    local $^W = 0;    # stop version.pm warnings
+    my $new_version    = $new->version;
+    my $latest_version = $latest->version;
+    my ( $newv, $latestv );
+
     eval {
-        $av = version->new( $a->version || 0 );
-        $bv = version->new( $b->version || 0 );
+        no warnings;
+        $newv    = version->new( $new_version    || 0 );
+        $latestv = version->new( $latest_version || 0 );
     };
-    if ( $av && $bv ) {
-        if ( $av > $bv ) {
-            $self->_set_latest_distribution($a);
+    if ( $newv && $latestv ) {
+        if ( $newv > $latestv ) {
+            $self->_set_latest_distribution($new);
         }
     } else {
-        if ( $a->dist > $b->dist ) {
-            $self->_set_latest_distribution($a);
+        no warnings;
+        if ( $new_version > $latest_version ) {
+            $self->_set_latest_distribution($new);
         }
     }
 }
 
 sub distribution {
-    my $self = shift;
-    my $dist = shift;
+    my ( $self, $dist ) = @_;
     return $self->dists->{$dist};
 }
 
@@ -190,15 +194,13 @@ sub distributions {
 }
 
 sub _set_latest_distribution {
-    my $self = shift;
-    my $dist = shift;
+    my ( $self, $dist ) = @_;
     return unless $dist->dist;
     $self->latestdists->{ $dist->dist } = $dist;
 }
 
 sub latest_distribution {
-    my $self = shift;
-    my $dist = shift;
+    my ( $self, $dist ) = @_;
     return unless $dist;
     return $self->latestdists->{$dist};
 }
@@ -412,8 +414,18 @@ automatically.)
 =item add_distribution($distribution_obj)
 
 Adds a distribution.  Note that you'll probably want to add the
-corrisponding packages for that distribution too (it's not done
+corresponding packages for that distribution too (it's not done
 automatically.)
+
+=item distribution_from_prefix($prefix)
+
+Returns a distribution given a prefix.
+
+=item latest_distributions
+
+Returns all the latest distributions:
+
+  my @distributions = $p->latest_distributions;
 
 =cut
 
@@ -425,7 +437,9 @@ Leon Brocard <acme@astray.com>
 
 =head1 COPYRIGHT
 
-Copyright (C) 2004-8, Leon Brocard
+Copyright (C) 2004-9, Leon Brocard
+
+=head1 LICENSE
 
 This module is free software; you can redistribute it or modify it under
 the same terms as Perl itself.
