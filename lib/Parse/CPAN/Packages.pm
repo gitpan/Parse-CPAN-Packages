@@ -5,8 +5,9 @@ use Compress::Zlib;
 use Parse::CPAN::Packages::Distribution;
 use Parse::CPAN::Packages::Package;
 use version;
-our $VERSION = '2.30';
+our $VERSION = '2.31';
 
+has 'filename'    => ( is => 'rw', isa => 'Str' );
 has 'details'     => ( is => 'rw', isa => 'HashRef', default => sub { {} } );
 has 'data'        => ( is => 'rw', isa => 'HashRef', default => sub { {} } );
 has 'dists'       => ( is => 'rw', isa => 'HashRef', default => sub { {} } );
@@ -14,9 +15,14 @@ has 'latestdists' => ( is => 'rw', isa => 'HashRef', default => sub { {} } );
 
 __PACKAGE__->meta->make_immutable;
 
-sub new {
+sub BUILDARGS {
     my ( $class, $filename ) = @_;
-    my $self = $class->SUPER::new();
+    return { filename => $filename };
+}
+
+sub BUILD {
+    my $self     = shift;
+    my $filename = $self->filename;
 
     # read the file then parse it if present
     $self->parse($filename) if $filename;
