@@ -1,6 +1,6 @@
 --- #YAML:1.0
 name:               Parse-CPAN-Packages
-version:            2.32
+version:            2.33
 abstract:           Parse 02packages.details.txt.gz
 author:
     - Leon Brocard <acme@astray.com>
