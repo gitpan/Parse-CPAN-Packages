@@ -2,12 +2,16 @@ package Parse::CPAN::Packages;
 use Moose;
 use CPAN::DistnameInfo;
 use Compress::Zlib;
+use Path::Class ();
+use File::Slurp 'read_file';
 use Parse::CPAN::Packages::Distribution;
 use Parse::CPAN::Packages::Package;
 use version;
-our $VERSION = '2.33';
+our $VERSION = '2.34';
 
-has 'filename'    => ( is => 'rw', isa => 'Str' );
+has 'filename' => ( is => 'rw', isa => 'Str' );
+has 'mirror_dir' => ( is => 'rw', isa => 'Str|Undef', lazy_build => 1 );
+
 has 'details'     => ( is => 'rw', isa => 'HashRef', default => sub { {} } );
 has 'data'        => ( is => 'rw', isa => 'HashRef', default => sub { {} } );
 has 'dists'       => ( is => 'rw', isa => 'HashRef', default => sub { {} } );
@@ -16,8 +20,9 @@ has 'latestdists' => ( is => 'rw', isa => 'HashRef', default => sub { {} } );
 __PACKAGE__->meta->make_immutable;
 
 sub BUILDARGS {
-    my ( $class, $filename ) = @_;
-    return { filename => $filename };
+    my ( $class, @args ) = @_;
+    return {@args} if @args > 1;
+    return { filename => $args[0] };
 }
 
 sub BUILD {
@@ -25,9 +30,17 @@ sub BUILD {
     my $filename = $self->filename;
 
     # read the file then parse it if present
-    $self->parse($filename) if $filename;
+    $self->parse( $filename ) if $filename;
 
     return $self;
+}
+
+sub _build_mirror_dir {
+    my ( $self ) = @_;
+    return if $self->filename =~ /\n/;
+    return if !-f $self->filename;
+    my $dir = Path::Class::file( $self->filename )->dir->parent;
+    return $dir->stringify;
 }
 
 # read the file into memory and return it
@@ -35,29 +48,19 @@ sub _slurp_details {
     my ( $self, $filename ) = @_;
     $filename ||= '02packages.details.txt.gz';
 
-    if ( $filename =~ /Description:/ ) {
-        return $filename;
-    } elsif ( $filename =~ /\.gz/ ) {
-        open( IN, $filename ) || die "Failed to read $filename: $!";
-		binmode *IN;
-        my $data = join '', <IN>;
-        close(IN);
-        return Compress::Zlib::memGunzip($data);
-    } elsif ( $filename =~ /^\037\213/ ) {
-        return Compress::Zlib::memGunzip($filename);
-    } else {
-        open( IN, $filename ) || die "Failed to read $filename: $!";
-        binmode *IN;
-        my $data = join '', <IN>;
-        close(IN);
-		return $data;
-    }
+    return $filename if $filename =~ /Description:/;
+    return Compress::Zlib::memGunzip( $filename ) if $filename =~ /^\037\213/;
+
+    my @read_params = ( $filename );
+    push @read_params, ( binmode => ':raw' ) if $filename =~ /\.gz/;
+
+    my $data = read_file( @read_params );
+
+    return Compress::Zlib::memGunzip( $data ) if $filename =~ /\.gz/;
+    return $data;
 }
 
-foreach my $subname (
-    qw(file url description columns intended_for written_by line_count last_updated)
-    )
-{
+for my $subname ( qw(file url description columns intended_for written_by line_count last_updated) ) {
     no strict 'refs';
     *{$subname} = sub { return shift->{preamble}{$subname} };
 }
@@ -66,18 +69,18 @@ sub parse {
     my ( $self, $filename ) = @_;
 
     # read the preamble
-    my @details = split "\n", $self->_slurp_details($filename);
-    while (@details) {
+    my @details = split "\n", $self->_slurp_details( $filename );
+    while ( @details ) {
         local $_ = shift @details;
         last if /^\s*$/;
         next unless /^([^:]+):\s*(.*)/;
-        my ( $key, $value ) = ( lc($1), $2 );
+        my ( $key, $value ) = ( lc( $1 ), $2 );
         $key =~ tr/-/_/;
         $self->{preamble}{$key} = $value;
     }
 
     # run though each line of the file
-    foreach my $line (@details) {
+    for my $line ( @details ) {
 
         # make a package object from the line
         my ( $package_name, $package_version, $prefix ) = split ' ', $line;
@@ -89,11 +92,12 @@ sub add_quick {
     my ( $self, $package_name, $package_version, $prefix ) = @_;
 
     # create a distribution object (or get an existing one)
-    my $dist = $self->distribution_from_prefix($prefix);
+    my $dist = $self->distribution_from_prefix( $prefix );
 
     # create the package object
     my $m = Parse::CPAN::Packages::Package->new(
-        {   package      => $package_name,
+        {
+            package      => $package_name,
             version      => $package_version,
             distribution => $dist
         }
@@ -101,30 +105,32 @@ sub add_quick {
 
     # make the package have the distribion and the distribution
     # have the package.  Yes, this creates a cirtular reference.  eek!
-    $dist->add_package($m);
+    $dist->add_package( $m );
 
     # record this distribution and package
-    $self->add_distribution($dist);
-    $self->add_package($m);
+    $self->add_distribution( $dist );
+    $self->add_package( $m );
 }
 
 sub distribution_from_prefix {
     my ( $self, $prefix ) = @_;
 
     # see if we have one of these already and return it if we do.
-    my $d = $self->distribution($prefix);
+    my $d = $self->distribution( $prefix );
     return $d if $d;
 
     # create a new one otherwise
-    my $i = CPAN::DistnameInfo->new($prefix);
+    my $i = CPAN::DistnameInfo->new( $prefix );
     $d = Parse::CPAN::Packages::Distribution->new(
-        {   prefix    => $prefix,
-            dist      => $i->dist,
-            version   => $i->version,
-            maturity  => $i->maturity,
-            filename  => $i->filename,
-            cpanid    => $i->cpanid,
-            distvname => $i->distvname
+        {
+            prefix     => $prefix,
+            dist       => $i->dist,
+            version    => $i->version,
+            maturity   => $i->maturity,
+            filename   => $i->filename,
+            cpanid     => $i->cpanid,
+            distvname  => $i->distvname,
+            mirror_dir => $self->mirror_dir,
         }
     );
     return $d;
@@ -152,8 +158,8 @@ sub packages {
 sub add_distribution {
     my ( $self, $dist ) = @_;
 
-    $self->_store_distribution($dist);
-    $self->_ensure_latest_distribution($dist);
+    $self->_store_distribution( $dist );
+    $self->_ensure_latest_distribution( $dist );
 }
 
 sub _store_distribution {
@@ -166,8 +172,8 @@ sub _ensure_latest_distribution {
     my ( $self, $new ) = @_;
 
     my $latest = $self->latest_distribution( $new->dist );
-    unless ($latest) {
-        $self->_set_latest_distribution($new);
+    if ( !$latest ) {
+        $self->_set_latest_distribution( $new );
         return;
     }
     my $new_version    = $new->version;
@@ -179,16 +185,18 @@ sub _ensure_latest_distribution {
         $newv    = version->new( $new_version    || 0 );
         $latestv = version->new( $latest_version || 0 );
     };
-    if ( $newv && $latestv ) {
-        if ( $newv > $latestv ) {
-            $self->_set_latest_distribution($new);
-        }
-    } else {
-        no warnings;
-        if ( $new_version > $latest_version ) {
-            $self->_set_latest_distribution($new);
-        }
-    }
+
+    $self->_set_latest_distribution( $new ) if $self->_dist_is_latest( $newv, $latestv, $new_version, $latest_version );
+
+    return;
+}
+
+sub _dist_is_latest {
+    my ( $self, $newv, $latestv, $new_version, $latest_version ) = @_;
+    return 1 if $newv && $latestv && $newv > $latestv;
+    no warnings;
+    return 1 if $new_version > $latest_version;
+    return 0;
 }
 
 sub distribution {

@@ -1,129 +1,113 @@
-#!/usr/bin/perl -w
+#!/usr/bin/perl
 use strict;
-use lib 'lib';
-use Test::More tests => 38;
-use_ok("Parse::CPAN::Packages");
+use Test::InDistDir;
+use Test::More tests => 50;
+use File::Slurp 'read_file';
 
-my $p = Parse::CPAN::Packages->new("t/02packages.details.txt");
-isa_ok( $p, "Parse::CPAN::Packages" );
+run();
 
-my @packages = sort map { $_->package } $p->packages;
-is_deeply(
-    \@packages,
-    [   qw(Acme::Colour Acme::Colour::Old Acme::ComeFrom Acme::Comment Acme::CramCode Acme::Currency accessors accessors::chained accessors::classic )
-    ]
-);
+sub run {
+    use_ok( "Parse::CPAN::Packages" );
 
-is( $p->file, '02packages.details.txt', 'file' );
-is( $p->url, 'http://www.perl.com/CPAN/modules/02packages.details.txt',
-    'url' );
-is( $p->description, 'Package names found in directory $CPAN/authors/id/',
-    'description' );
-is( $p->columns, 'package name, version, path', 'columns' );
-is( $p->intended_for, 'Automated fetch routines, namespace documentation.',
-    'intended for' );
-is( $p->written_by, 'Id: mldistwatch 479 2004-01-04 13:29:05Z k ',
-    'written by' );
-is( $p->line_count, 23609, 'line count' );
-is( $p->last_updated, 'Fri, 13 Feb 2004 13:50:21 GMT', 'last updated' );
+    default_features();
 
-my $m = $p->package("Acme::Colour");
-is( $m->package, "Acme::Colour" );
-is( $m->version, "1.00" );
+    my $raw_data = read_file( "t/02packages.details.txt" );
+    my $gz_data = read_file( "t/02packages.details.txt.gz", binmode => ':raw' );
 
-my $d = $m->distribution;
-is( $d->prefix,    "L/LB/LBROCARD/Acme-Colour-1.00.tar.gz" );
-is( $d->dist,      "Acme-Colour" );
-is( $d->version,   "1.00" );
-is( $d->maturity,  "released" );
-is( $d->filename,  "Acme-Colour-1.00.tar.gz" );
-is( $d->cpanid,    "LBROCARD" );
-is( $d->distvname, "Acme-Colour-1.00" );
+    creation_check( "t/02packages.details.txt.gz", "gzip file is parsed" );
+    creation_check( $raw_data,                     "text contents are parsed" );
+    creation_check( $gz_data,                      "gzip contents are parsed" );
 
-is( $p->package("accessors::chained")->distribution->dist,
-    "accessors", "accessors::chained lives in accessors" );
+    dist_contents( "t/mirror/modules/02packages.details.txt.gz", "mirror file with implicit mirror directory" );
+    dist_contents( filename => "t/02packages.details.txt", mirror_dir => "t/mirror", "mirror file with explicit mirror dir" );
 
-is( $p->package("accessors::classic")->distribution->dist,
-    "accessors", "as does accessors::classic" );
+    return;
+}
 
-is( $p->package("accessors::chained")->distribution,
-    $p->package("accessors::classic")->distribution,
-    "and they're using the same distribution object"
-);
+sub default_features {
+    my ( $p, @packages ) = creation_check( "t/02packages.details.txt", "text file is parsed" );
 
-my $dist = $p->distribution('S/SP/SPURKIS/accessors-0.02.tar.gz');
-is( $dist->dist, 'accessors' );
-is( $dist,
-    $p->package("accessors::chained")->distribution,
-    "by path match by name"
-);
+    is( $p->file,         '02packages.details.txt',                                  'file' );
+    is( $p->url,          'http://www.perl.com/CPAN/modules/02packages.details.txt', 'url' );
+    is( $p->description,  'Package names found in directory $CPAN/authors/id/',      'description' );
+    is( $p->columns,      'package name, version, path',                             'columns' );
+    is( $p->intended_for, 'Automated fetch routines, namespace documentation.',      'intended for' );
+    is( $p->written_by,   'Id: mldistwatch 479 2004-01-04 13:29:05Z k ',             'written by' );
+    is( $p->line_count,   23609,                                                     'line count' );
+    is( $p->last_updated, 'Fri, 13 Feb 2004 13:50:21 GMT',                           'last updated' );
 
-is_deeply(
-    [ map { $_->package } $dist->contains ],
-    [qw( accessors accessors::chained accessors::classic )],
-    "dist contains packages"
-);
+    my $m = $p->package( "Acme::Colour" );
+    is( $m->package, "Acme::Colour" );
+    is( $m->version, "1.00" );
 
-$d = $p->latest_distribution("Acme-Colour");
-is( $d->prefix,  "L/LB/LBROCARD/Acme-Colour-1.00.tar.gz" );
-is( $d->version, "1.00" );
+    my $d = $m->distribution;
+    is( $d->prefix,    "L/LB/LBROCARD/Acme-Colour-1.00.tar.gz" );
+    is( $d->dist,      "Acme-Colour" );
+    is( $d->version,   "1.00" );
+    is( $d->maturity,  "released" );
+    is( $d->filename,  "Acme-Colour-1.00.tar.gz" );
+    is( $d->cpanid,    "LBROCARD" );
+    is( $d->distvname, "Acme-Colour-1.00" );
 
-is_deeply(
-    [ sort map { $_->prefix } $p->latest_distributions ],
-    [   'A/AU/AUTRIJUS/Acme-ComeFrom-0.07.tar.gz',
-        'K/KA/KANE/Acme-Comment-1.02.tar.gz',
-        'L/LB/LBROCARD/Acme-Colour-1.00.tar.gz',
-        'S/SM/SMUELLER/Acme-Currency-0.01.tar.gz',
-        'S/SP/SPURKIS/accessors-0.02.tar.gz',
-        'X/XE/XERN/Acme-CramCode-0.01.tar.gz',
-    ]
-);
+    is( $p->package( "accessors::chained" )->distribution->dist, "accessors", "accessors::chained lives in accessors" );
 
-# counts
-is( $p->package_count(),             scalar @packages, "package count" );
-is( $p->distribution_count(),        7,                "dist count" );
-is( $p->latest_distribution_count(), 6,                "latest dist count" );
+    is( $p->package( "accessors::classic" )->distribution->dist, "accessors", "as does accessors::classic" );
 
-open( IN, "t/02packages.details.txt" );
-my $details = join '', <IN>;
-close(IN);
+    is( $p->package( "accessors::chained" )->distribution, $p->package( "accessors::classic" )->distribution, "and they're using the same distribution object" );
 
-# Try the interface which takes in the contents
+    my $dist = $p->distribution( 'S/SP/SPURKIS/accessors-0.02.tar.gz' );
+    is( $dist->dist, 'accessors' );
+    is( $dist, $p->package( "accessors::chained" )->distribution, "by path match by name" );
 
-$p = Parse::CPAN::Packages->new($details);
-isa_ok( $p, "Parse::CPAN::Packages" );
+    is_deeply( [ map { $_->package } $dist->contains ], [qw( accessors accessors::chained accessors::classic )], "dist contains packages" );
 
-@packages = sort map { $_->package } $p->packages;
-is_deeply(
-    \@packages,
-    [   qw(Acme::Colour Acme::Colour::Old Acme::ComeFrom Acme::Comment Acme::CramCode Acme::Currency accessors accessors::chained accessors::classic )
-    ]
-);
+    $d = $p->latest_distribution( "Acme-Colour" );
+    is( $d->prefix,  "L/LB/LBROCARD/Acme-Colour-1.00.tar.gz" );
+    is( $d->version, "1.00" );
 
-# Try the interface which takes in a .gz
+    is_deeply(
+        [ sort map { $_->prefix } $p->latest_distributions ],
+        [
+            'A/AU/AUTRIJUS/Acme-ComeFrom-0.07.tar.gz', 'K/KA/KANE/Acme-Comment-1.02.tar.gz', 'L/LB/LBROCARD/Acme-Colour-1.00.tar.gz', 'S/SM/SMUELLER/Acme-Currency-0.01.tar.gz',
+            'S/SP/SPURKIS/accessors-0.02.tar.gz',      'X/XE/XERN/Acme-CramCode-0.01.tar.gz',
+        ]
+    );
 
-$p = Parse::CPAN::Packages->new("t/02packages.details.txt.gz");
-isa_ok( $p, "Parse::CPAN::Packages" );
+    # counts
+    is( $p->package_count,             scalar @packages, "package count" );
+    is( $p->distribution_count,        7,                "dist count" );
+    is( $p->latest_distribution_count, 6,                "latest dist count" );
 
-@packages = sort map { $_->package } $p->packages;
-is_deeply(
-    \@packages,
-    [   qw(Acme::Colour Acme::Colour::Old Acme::ComeFrom Acme::Comment Acme::CramCode Acme::Currency accessors accessors::chained accessors::classic )
-    ]
-);
+    return;
+}
 
-# Try the interface which takes in gzipped contents
+sub dist_contents {
+    my ( $p ) = creation_check( @_ );
 
-open( IN, "t/02packages.details.txt.gz" );
-$details = join '', <IN>;
-close(IN);
+    my $file = "Acme-Comment-1.02/lib/Acme/Comment.pm";
 
-$p = Parse::CPAN::Packages->new($details);
-isa_ok( $p, "Parse::CPAN::Packages" );
+    my $first_dist = ( $p->distributions )[0];
+    is( ( $first_dist->list_files )[0], $file, "listing files in dists works" );
 
-@packages = sort map { $_->package } $p->packages;
-is_deeply(
-    \@packages,
-    [   qw(Acme::Colour Acme::Colour::Old Acme::ComeFrom Acme::Comment Acme::CramCode Acme::Currency accessors accessors::chained accessors::classic )
-    ]
-);
+    my $first_pkg = ( $p->packages )[0];
+    is( $first_pkg->filename,                        $file, "a package can generate a good guess file name" );
+    is( $first_dist->get_file_from_tarball( $file ), "moo", "getting the content of a file in a dist works" );
+    is( $first_pkg->file_content,                    "moo", "a package can provide the content of its file" );
+
+    return;
+}
+
+sub creation_check {
+    my $reason = pop;
+    my $p      = Parse::CPAN::Packages->new( @_ );
+    isa_ok( $p, "Parse::CPAN::Packages" );
+
+    my @packages = sort map { $_->package } $p->packages;
+    is_deeply( \@packages, default_packages(), $reason );
+
+    return ( $p, @packages );
+}
+
+sub default_packages {
+    return [qw(Acme::Colour Acme::Colour::Old Acme::ComeFrom Acme::Comment Acme::CramCode Acme::Currency accessors accessors::chained accessors::classic )];
+}
