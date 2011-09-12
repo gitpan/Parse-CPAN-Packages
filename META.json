@@ -37,6 +37,7 @@
             "Compress::Zlib" : 0,
             "File::Slurp" : 0,
             "Moose" : 0,
+            "PPI" : 0,
             "Path::Class" : 0,
             "Test::InDistDir" : 0,
             "Test::More" : 0,
@@ -45,5 +46,5 @@
       }
    },
    "release_status" : "stable",
-   "version" : "2.34"
+   "version" : "2.35"
 }
